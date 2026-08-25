@@ -4,12 +4,12 @@ The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramp
 
 ## ✨ Features
 
-* **Siblings & Cousins:** Displays not only direct ancestors but also their siblings, spouses, and cousins (children of siblings).
-* **Smart Connection Routing:** Replaces the standard intersecting lines with a custom "circuit-board" style routing system. Collateral family lines are offset from the main ancestral trunk.
-* **Bridged Intersections:** When a collateral line crosses the main ancestral line, a small semi-circular "bridge" (jump) is drawn, making the tree much easier to read.
-* **Color-Coded Families:** An optional setting to generate distinctly colored connection lines for each separate family group.
-* **Modern Typography & Design:** Heavy drop shadows have been removed for a cleaner "flat" design, and personal names are dynamically rendered in **bold** to stand out from dates and places.
-* **Auto-Compression:** The graph layout engine automatically compresses vertical space, eliminating the huge gaps seen in standard reports when ancestors are unknown.
+* **Siblings & Cousins:** Displays not only direct ancestors but also their siblings, spouses, cousins, and collateral descendants through recursive family branches[cite: 3].
+* **Smart Connection Routing:** Replaces the standard intersecting lines with a custom "circuit-board" style routing system. Collateral family lines are offset from the main ancestral trunk[cite: 3].
+* **Bridged Intersections:** When a collateral line crosses the main ancestral line, a small semi-circular "bridge" (jump) is drawn, making the tree much easier to read[cite: 3].
+* **Color-Coded Families:** An optional setting to generate distinctly colored connection lines for each separate family group[cite: 3].
+* **Modern Typography & Design:** Heavy drop shadows have been removed for a cleaner "flat" design, and personal names are dynamically rendered in **bold** to stand out from dates and places[cite: 3].
+* **Auto-Compression:** The graph layout engine automatically compresses vertical space,
 
 ## 📥 Installation
 
@@ -26,12 +26,12 @@ The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramp
 In the report dialog, you will find new options under the **Tree Options** and **Display** tabs:
 * Check *Include siblings of the center person*
 * Check *Include siblings of ancestors*
-* Check *Include cousins (children of siblings)*
+* Check *Include cousins and collateral relatives*
 * Check *Use random colors for family lines* (Found under the Display tab).
 
 ## 📜 License & Credits
 
-This plugin is released under the **GNU General Public License (GPL) v3**.
+This plugin is released under the **GNU General Public License (GPL) v2 or later**.
 
 * **Original Ancestor Tree Code:** Donald N. Allingham, Brian G. Matherly, Jakim Friant, Paul Franklin, Craig J. Anderson.
 * **Expanded Logic & Smart Routing (2026):** Bartok Szabolcs (kotrabdev)
