@@ -2,14 +2,23 @@
 
 The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramps genealogy program. It is a heavily enhanced fork of the built-in Ancestor Tree report, completely redesigned to visualize collateral family lines without visual clutter.
 
-## ✨ Features
+## Features
+* **Expanded View:** Shows direct ancestors along with their siblings.
+* **Cousin Support:** Optionally display the descendants of the ancestors' siblings.
+* **Center Person Descendants:** Optionally display the spouse(s) and full descending lines (children, grandchildren) of the center person.
+* **Smart Routing:** Intelligently draws intersecting family branches with clean, bridged lines to prevent visual confusion.
+* **Dynamic Colors:** Option to draw each family's connecting lines with a distinct color.
+* **Modern Design:** Clean, flat box design with bold typography for easier readability.
+* **Safety Limits:** Built-in failsafe prevents memory issues by aborting the generation if t
 
-* **Siblings & Cousins:** Displays not only direct ancestors but also their siblings, spouses, cousins, and collateral descendants through recursive family branches[cite: 3].
-* **Smart Connection Routing:** Replaces the standard intersecting lines with a custom "circuit-board" style routing system. Collateral family lines are offset from the main ancestral trunk[cite: 3].
-* **Bridged Intersections:** When a collateral line crosses the main ancestral line, a small semi-circular "bridge" (jump) is drawn, making the tree much easier to read[cite: 3].
-* **Color-Coded Families:** An optional setting to generate distinctly colored connection lines for each separate family group[cite: 3].
-* **Modern Typography & Design:** Heavy drop shadows have been removed for a cleaner "flat" design, and personal names are dynamically rendered in **bold** to stand out from dates and places[cite: 3].
-* **Auto-Compression:** The graph layout engine automatically compresses vertical space,
+## Changelog
+
+### v1.0.1
+* **Feature:** Added support for showing the center person's spouse and full descending lines (toggleable in Tree Options).
+* **Fix:** Implemented a smart routing algorithm for connecting lines. Bridges are now only drawn at actual physical intersections.
+* **Fix:** Corrected horizontal cascade geometry so family branch lines perfectly align with sibling/cousin offsets.
+* **Enhancement:** Added limits to prevent performance issues and freezing on massive family trees.
+* **UI:** Renamed the report display name to "Ancestor Tree Expanded" so it appears adjace
 
 ## 📥 Installation
 
