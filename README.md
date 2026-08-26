@@ -13,6 +13,10 @@ The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramp
 
 ## Changelog
 
+### v1.0.2
+* **Enhancement:** Added a `Descendant Generations` limit to the UI (Tree Options) to control how deep the downward branches grow.
+* **Fix:** Replaced the hard crash on large trees with a graceful soft limit. The engine now safely halts expansion at 250 people, displays a warning dialog, and successfully generates the report with the discovered individuals without freezing Gramps.
+
 ### v1.0.1
 * **Feature:** Added support for showing the center person's spouse and full descending lines (toggleable in Tree Options).
 * **Fix:** Implemented a smart routing algorithm for connecting lines. Bridges are now only drawn at actual physical intersections.
