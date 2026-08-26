@@ -1,0 +1,13 @@
+[
+  {
+    "n": "Ancestor Tree Expanded",
+    "i": "ExpandedAncestorTree",
+    "t": 0,
+    "d": "Grafic de strămoși extins care arată strămoșii direcți, frații, verii și soții/soțiile.",
+    "v": "1.0.1",
+    "g": "6.0",
+    "s": 3,
+    "z": "ExpandedAncestorTree.addon.tgz",
+    "h": "https://gramps.discourse.group/t/9891"
+  }
+]
