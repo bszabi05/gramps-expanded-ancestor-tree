@@ -24,6 +24,7 @@ The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramp
 * **Enhancement:** Added limits to prevent performance issues and freezing on massive family trees.
 * **UI:** Renamed the report display name to "Ancestor Tree Expanded" so it appears adjace
 
+
 ## 📥 Installation
 
 1. Download the `ExpandedAncestorTree.zip` release.
