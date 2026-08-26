@@ -34,6 +34,7 @@ The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramp
 ## ⚙️ Configuration
 
 In the report dialog, you will find new options under the **Tree Options** and **Display** tabs:
+* Check *Include descendants of the center person*
 * Check *Include siblings of the center person*
 * Check *Include siblings of ancestors*
 * Check *Include cousins and collateral relatives*
