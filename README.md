@@ -4,7 +4,7 @@ The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramp
 
 ## ✨ Features
 
-* **Siblings & Cousins:** Displays not only direct ancestors but also their siblings, spouses, and cousins (children of siblings).
+* **Siblings & Cousins:** Displays not only direct ancestors but also their siblings, spouses, and cousins.
 * **Smart Connection Routing:** Replaces the standard intersecting lines with a custom "circuit-board" style routing system. Collateral family lines are offset from the main ancestral trunk.
 * **Bridged Intersections:** When a collateral line crosses the main ancestral line, a small semi-circular "bridge" (jump) is drawn, making the tree much easier to read.
 * **Color-Coded Families:** An optional setting to generate distinctly colored connection lines for each separate family group.
