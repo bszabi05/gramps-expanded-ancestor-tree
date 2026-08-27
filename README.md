@@ -39,7 +39,7 @@ The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramp
 In the report dialog, you will find new options under the **Tree Options** and **Display** tabs:
 * Check *Include siblings of the center person*
 * Check *Include siblings of ancestors*
-* Check *Include cousins (children of siblings)*
+* Check *Include cousins*
 * Check *Use random colors for family lines* (Found under the Display tab).
 
 ## 📜 License & Credits
