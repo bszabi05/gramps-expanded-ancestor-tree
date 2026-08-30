@@ -3,6 +3,7 @@
 The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramps genealogy program. It is a heavily enhanced fork of the built-in Ancestor Tree report, completely redesigned to visualize collateral family lines without visual clutter.
 
 ## Features
+
 * **Expanded View:** Shows direct ancestors along with their siblings.
 * **Cousin Support:** Optionally display the descendants of the ancestors' siblings.
 * **Center Person Descendants:** Optionally display the spouse(s) and full descending lines (children, grandchildren) of the center person.
@@ -13,17 +14,23 @@ The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramp
 
 ## Changelog
 
+### v1.0.3
+* **Fix:** Smart-routing connection lines now render correctly across multiple page when "Scale tree to fit" is disabled
+* **Fix:** Fixed and optimized PDF and SVG generation for multi-page layouts.
+
+
 ### v1.0.2
+
 * **Enhancement:** Added a `Descendant Generations` limit to the UI (Tree Options) to control how deep the downward branches grow.
 * **Fix:** Replaced the hard crash on large trees with a graceful soft limit. The engine now safely halts expansion at 250 people, displays a warning dialog, and successfully generates the report with the discovered individuals without freezing Gramps.
 
 ### v1.0.1
+
 * **Feature:** Added support for showing the center person's spouse and full descending lines (toggleable in Tree Options).
 * **Fix:** Implemented a smart routing algorithm for connecting lines. Bridges are now only drawn at actual physical intersections.
 * **Fix:** Corrected horizontal cascade geometry so family branch lines perfectly align with sibling/cousin offsets.
 * **Enhancement:** Added limits to prevent performance issues and freezing on massive family trees.
 * **UI:** Renamed the report display name to "Ancestor Tree Expanded" so it appears adjace
-
 
 ## 📥 Installation
 
@@ -38,6 +45,7 @@ The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramp
 ## ⚙️ Configuration
 
 In the report dialog, you will find new options under the **Tree Options** and **Display** tabs:
+
 * Check *Include descendants of the center person*
 * Check *Include siblings of the center person*
 * Check *Include siblings of ancestors*
