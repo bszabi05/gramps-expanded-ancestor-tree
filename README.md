@@ -2,7 +2,15 @@
 
 The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramps genealogy program. It is a heavily enhanced fork of the built-in Ancestor Tree report, completely redesigned to visualize collateral family lines without visual clutter.
 
-## ✨ Features
+## Features
+
+* **Expanded View:** Shows direct ancestors along with their siblings.
+* **Cousin Support:** Optionally display the descendants of the ancestors' siblings.
+* **Center Person Descendants:** Optionally display the spouse(s) and full descending lines (children, grandchildren) of the center person.
+* **Smart Routing:** Intelligently draws intersecting family branches with clean, bridged lines to prevent visual confusion.
+* **Dynamic Colors:** Option to draw each family's connecting lines with a distinct color.
+* **Modern Design:** Clean, flat box design with bold typography for easier readability.
+* **Safety Limits:** Built-in failsafe prevents memory issues by aborting the generation if t
 
 * **Siblings & Cousins:** Displays not only direct ancestors but also their siblings, spouses, and cousins.
 * **Smart Connection Routing:** Replaces the standard intersecting lines with a custom "circuit-board" style routing system. Collateral family lines are offset from the main ancestral trunk.
@@ -11,20 +19,27 @@ The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramp
 * **Modern Typography & Design:** Heavy drop shadows have been removed for a cleaner "flat" design, and personal names are dynamically rendered in **bold** to stand out from dates and places.
 * **Auto-Compression:** The graph layout engine automatically compresses vertical space, eliminating the huge gaps seen in standard reports when ancestors are unknown.
 
+### v1.0.3
+
+* **Fix:** Smart-routing connection lines now render correctly across multiple page when "Scale tree to fit" is disabled
+* **Fix:** Fixed and optimized PDF and SVG generation for multi-page layouts.
+* **Fix:** Adjusted global page margins and box vertical spacing to prevent top-level index numbers from being cropped.
+* **Fix:** Eliminated duplicate "ghost" connection lines appearing at page breaks in multi-page PDF documents.
+
+### v1.0.2
+
+* **Enhancement:** Added a `Descendant Generations` limit to the UI (Tree Options) to control how deep the downward branches grow.
+* **Fix:** Replaced the hard crash on large trees with a graceful soft limit. The engine now safely halts expansion at 250 people, displays a warning dialog, and successfully generates the report with the discovered individuals without freezing Gramps.
+
+### v1.0.1
+
+* **Feature:** Added support for showing the center person's spouse and full descending lines (toggleable in Tree Options).
+* **Fix:** Implemented a smart routing algorithm for connecting lines. Bridges are now only drawn at actual physical intersections.
+* **Fix:** Corrected horizontal cascade geometry so family branch lines perfectly align with sibling/cousin offsets.
+* **Enhancement:** Added limits to prevent performance issues and freezing on massive family trees.
+* **UI:** Renamed the report display name to "Ancestor Tree Expanded" so it appears adjace
+
 ## 📥 Installation
-
-### Via Addon Manager (Recommended):
-
-1. Open Gramps → **Edit** → **Addon Manager**
-2. Go to the **Projects** tab
-3. Add (if not already present) and select your repository project URL from the Project tab:
-   `https://raw.githubusercontent.com/bszabi05/gramps-expanded-ancestor-tree/addon-manager/gramps60`
-4. Click **Refresh**
-5. Find **Expanded Ancestor Tree** under the Reports category
-6. Click **Install**
-7. Restart Gramps
-
-### Manual Installation:
 
 1. Download the latest release package.
 2. Extract the folder into your Gramps user plugins directory:
@@ -37,6 +52,8 @@ The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramp
 ## ⚙️ Configuration
 
 In the report dialog, you will find new options under the **Tree Options** and **Display** tabs:
+
+* Check *Include descendants of the center person*
 * Check *Include siblings of the center person*
 * Check *Include siblings of ancestors*
 * Check *Include cousins*
