@@ -15,9 +15,11 @@ The **Expanded Ancestor Tree** is a custom graphical report plugin for the Gramp
 ## Changelog
 
 ### v1.0.3
+
 * **Fix:** Smart-routing connection lines now render correctly across multiple page when "Scale tree to fit" is disabled
 * **Fix:** Fixed and optimized PDF and SVG generation for multi-page layouts.
-
+* **Fix:** Adjusted global page margins and box vertical spacing to prevent top-level index numbers from being cropped.
+* **Fix:** Eliminated duplicate "ghost" connection lines appearing at page breaks in multi-page PDF documents.
 
 ### v1.0.2
 
