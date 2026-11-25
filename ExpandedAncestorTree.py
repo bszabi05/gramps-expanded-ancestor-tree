@@ -118,31 +118,40 @@ class PersonBox(BoxBase):
         x = self.x_cm - self.page.page_x_offset
         y = self.y_cm - self.page.page_y_offset
 
-        doc.draw_box(self.boxstr, "", x, y, self.width, self.height)
-
         if isinstance(self.text, str):
             lines = self.text.split('\n')
         else:
             lines = self.text
 
-        y_off = 0.3
-        for i, line_text in enumerate(lines):
-            if not line_text.strip():
-                continue
-            style = "AC2-Name" if i == 0 else "AC2-Normal-Text"
-            doc.draw_text(style, line_text, x + 0.2, y + y_off)
-            y_off += 0.45
+        text_str = '\n'.join([line for line in lines if line.strip()])
 
-        # Print the running index one line-height above the frame.
-        if self.idx > 0:
+        doc_type_str = str(type(doc)).lower()
+        is_vector = any(v in doc_type_str for v in ['pdf', 'svg', 'cairo', 'psdoc', 'image'])
+
+        if is_vector:
             style_sheet = doc.get_style_sheet()
-            yoff_idx = PT2CM(style_sheet.get_paragraph_style("AC2-Normal").get_font().get_size())
-            doc.draw_text(self.boxstr, "%d" % self.idx, x, y - yoff_idx)
+            base_font_pt = style_sheet.get_paragraph_style("AC2-Normal").get_font().get_size()
+            lh = PT2CM(base_font_pt)
 
+            doc.draw_box(self.boxstr, "", x, y, self.width, self.height)
+
+            y_off = lh * 0.95
+            for i, line_text in enumerate(lines):
+                if not line_text.strip():
+                    continue
+                style = "AC2-Name" if i == 0 else "AC2-Normal-Text"
+                doc.draw_text(style, line_text, x + lh * 0.6, y + y_off)
+                y_off += lh * 1.2
+
+            if self.idx > 0:
+                doc.draw_text(self.boxstr, "%d" % self.idx, x, y - lh * 1.4)
+        else:
+            if self.idx > 0:
+                text_str = f"[{self.idx}] {text_str}"
+            doc.draw_box(self.boxstr, text_str, x, y, self.width, self.height)
 
 class FamilyBox(BoxBase):
     """Marriage/family box inherited from the original report.
-
     """
 
     def __init__(self, level):
@@ -183,80 +192,156 @@ class TitleA(TitleBox):
 
 
 class TreeConnectionLine(LineBase):
-    """Smart connector between child boxes (``start``) and parent boxes
-    (``end``), replacing the plain elbow lines of the original report.
-
-    Routing model (left-to-right tree, parents sit to the right)::
-
-    * ``is_main=True``  -> direct parent link; trunk placed at 20% of the
-      horizontal gap between the two columns.
-    * ``is_main=False`` -> sibling/cousin family-group link; trunk staggered
-      per ``family_index`` (40% + 15% per index, wrapping every 4 families)
-      so parallel side-lines never overlap each other.
-
-    Where incoming wires meet the shared vertical trunk at different heights,
-    a small rectangular "bridge" step is drawn instead of a plain junction,
-    making crossings visually unambiguous on the printed page.
-    """
+    """Smart connector between child boxes and parent boxes (Absolute coordinate version)."""
 
     def __init__(self, start_boxes, end_boxes, is_main=True, family_index=0):
-        LineBase.__init__(self, start_boxes[0])
-        self.start = start_boxes
-        self.end = end_boxes
+        self.start_boxes = start_boxes
+        self.end_boxes = end_boxes
         self.is_main = is_main
         self.family_index = family_index
+        self._abs_trunk_x = None
+        self._anti_collision_done = False
 
-    def get_vertical_trunk(self, page):
-        """Kiszámolja a függőleges összekötő vonal (trunk) koordinátáit és magasságát."""
-        if not self.start or not self.end:
+        all_boxes = start_boxes + (end_boxes if end_boxes else [])
+        if all_boxes:
+            top_box = min(all_boxes, key=lambda b: b.level[2])
+            bottom_box = max(all_boxes, key=lambda b: b.level[2])
+            LineBase.__init__(self, top_box)
+            self.end = bottom_box
+        else:
+            LineBase.__init__(self, start_boxes[0] if start_boxes else None)
+
+    def get_vertical_trunk(self, canvas):
+        if not self.start_boxes and not self.end_boxes:
             return None
 
-        e_box = self.end[0]
-        end_x = e_box.x_cm - page.page_x_offset
-        base_end_x = end_x
-
-        if getattr(e_box, 'level', [0])[LVL_GEN] <= 1:
-            c_offset = getattr(e_box, 'collateral_offset', 0)
-            if c_offset > 0:
-                base_end_x -= c_offset * 0.6
-
-        col_w = page.canvas.report_opts.col_width
-        main_x = base_end_x - col_w * 0.8
-
-        if self.is_main:
-            my_x = main_x
+        if self._abs_trunk_x is not None:
+            abs_x = self._abs_trunk_x
         else:
-            my_x = base_end_x - col_w * (0.6 - (self.family_index % 4) * 0.15)
+            col_w = canvas.report_opts.col_width
+            if self.end_boxes:
+                e_box = self.end_boxes[0]
+                base_end_x = e_box.x_cm
+                c_offset = getattr(e_box, 'collateral_offset', 0)
+                if c_offset > 0:
+                    base_end_x -= c_offset * 0.6
+
+                if self.is_main:
+                    abs_x = base_end_x - col_w * 0.8
+                else:
+                    abs_x = base_end_x - col_w * (0.6 - (self.family_index % 4) * 0.15)
+            else:
+                s_box = self.start_boxes[0]
+                abs_x = s_box.x_cm + s_box.width + col_w * 0.05
+
+            self._abs_trunk_x = abs_x
 
         min_y = 9999999
         max_y = -9999999
-        for b in self.start + self.end:
-            y = b.y_cm + b.height / 2.0 - page.page_y_offset
+        for b in self.start_boxes + self.end_boxes:
+            y = b.y_cm + b.height / 2.0
             min_y = min(min_y, y)
             max_y = max(max_y, y)
 
-        return (my_x, min_y, max_y)
+        return (self._abs_trunk_x, min_y, max_y)
 
     def display(self, page):
-        if not self.start or not self.end:
+        if not self.start_boxes and not self.end_boxes:
             return
 
-        doc = page.canvas.doc
-        color_opt = GUIConnect().color_lines()
-        line_style = f"AC2-line-color-{self.family_index % 15}" if color_opt else "AC2-line"
+        canvas = page.canvas
 
-        my_trunk = self.get_vertical_trunk(page)
+        y_offsets = [b.page.page_y_offset for b in self.start_boxes + self.end_boxes if getattr(b, 'page', None)]
+        x_offsets = [b.page.page_x_offset for b in self.start_boxes + self.end_boxes if getattr(b, 'page', None)]
+
+        if y_offsets and (page.page_y_offset < min(y_offsets) or page.page_y_offset > max(y_offsets)):
+            return
+        if x_offsets and (page.page_x_offset < min(x_offsets) or page.page_x_offset > max(x_offsets)):
+            return
+
+        my_trunk = self.get_vertical_trunk(canvas)
         if not my_trunk:
             return
-        my_x, min_y, max_y = my_trunk
+        abs_x, abs_min_y, abs_max_y = my_trunk
 
-        vertical_trunks = []
-        if hasattr(page.canvas, 'lines'):
-            for line in page.canvas.lines:
-                if isinstance(line, TreeConnectionLine) and line != self:
-                    trunk = line.get_vertical_trunk(page)
-                    if trunk:
-                        vertical_trunks.append(trunk)
+        if not self._anti_collision_done:
+            self._anti_collision_done = True
+            safe_distance = 0.25
+
+            other_trunks = []
+            if hasattr(canvas, 'lines'):
+                for line in canvas.lines:
+                    if isinstance(line, TreeConnectionLine) and line != self:
+                        trunk = line.get_vertical_trunk(canvas)
+                        if trunk:
+                            other_trunks.append(trunk)
+
+            candidates = [abs_x]
+            for step in range(1, 20):
+                candidates.append(abs_x + step * safe_distance)
+                candidates.append(abs_x - step * safe_distance)
+
+            best_x = abs_x
+            for cand_x in candidates:
+                collision = False
+
+                for Tx, Tmin_y, Tmax_y in other_trunks:
+                    if abs_max_y > Tmin_y - 0.1 and abs_min_y < Tmax_y + 0.1:
+                        if abs(cand_x - Tx) < safe_distance - 0.05:
+                            collision = True
+                            break
+                if collision:
+                    continue
+
+                for b in canvas.boxes:
+                    b_min_y = b.y_cm
+                    b_max_y = b_min_y + b.height
+                    if abs_max_y > b_min_y - 0.1 and abs_min_y < b_max_y + 0.1:
+                        b_min_x = b.x_cm
+                        b_max_x = b_min_x + b.width
+                        if b_min_x - 0.15 < cand_x < b_max_x + 0.15:
+                            collision = True
+                            break
+
+                if not collision:
+                    best_x = cand_x
+                    break
+
+            self._abs_trunk_x = best_x
+            abs_x = best_x
+
+        if getattr(self, 'color_index', None) is None:
+            used_colors = set()
+
+            self_min_x = min([b.x_cm for b in self.start_boxes + self.end_boxes] + [abs_x])
+            self_max_x = max([b.x_cm + b.width for b in self.start_boxes + self.end_boxes] + [abs_x])
+
+            if hasattr(canvas, 'lines'):
+                for line in canvas.lines:
+                    if isinstance(line, TreeConnectionLine) and line != self and getattr(line, 'color_index', None) is not None:
+                        trunk = line.get_vertical_trunk(canvas)
+                        if trunk:
+                            Tx, Tmin_y, Tmax_y = trunk
+                            if abs_max_y > Tmin_y - 2.0 and abs_min_y < Tmax_y + 2.0:
+                                if (self_min_x - 1.0 < Tx < self_max_x + 1.0) or abs(abs_x - Tx) < 6.0:
+                                    used_colors.add(line.color_index)
+
+            chosen_color = self.family_index % 30
+            for i in range(30):
+                candidate = (self.family_index + i) % 30
+                if candidate not in used_colors:
+                    chosen_color = candidate
+                    break
+            self.color_index = chosen_color
+
+        my_x = abs_x - page.page_x_offset
+        min_y = abs_min_y - page.page_y_offset
+        max_y = abs_max_y - page.page_y_offset
+
+        doc = page.canvas.doc
+        usable_width = doc.get_usable_width()
+        color_opt = GUIConnect().color_lines()
+        line_style = f"AC2-line-color-{self.family_index % 30}" if color_opt else "AC2-line"
 
         hw = 0.1
         h = 0.15
@@ -265,18 +350,29 @@ class TreeConnectionLine(LineBase):
             x_start = min(x1, x2)
             x_end = max(x1, x2)
 
+            if x_end < -0.1 or x_start > usable_width + 0.1:
+                return
+
             intersections = []
-            for Tx, Tmin_y, Tmax_y in vertical_trunks:
-                if x_start + 0.1 < Tx < x_end - 0.1:
-                    if Tmin_y + 0.05 < y_pos < Tmax_y - 0.05:
-                        intersections.append(Tx)
+            if hasattr(canvas, 'lines'):
+                for line in canvas.lines:
+                    if isinstance(line, TreeConnectionLine) and line != self:
+                        trunk = line.get_vertical_trunk(canvas)
+                        if trunk:
+                            Tx_abs, Tmin_y_abs, Tmax_y_abs = trunk
+                            Tx = Tx_abs - page.page_x_offset
+                            Tmin_y = Tmin_y_abs - page.page_y_offset
+                            Tmax_y = Tmax_y_abs - page.page_y_offset
+
+                            if x_start + 0.1 < Tx < x_end - 0.1:
+                                if Tmin_y + 0.05 < y_pos < Tmax_y - 0.05:
+                                    intersections.append(Tx)
 
             intersections.sort()
 
             current_x = x_start
             for Tx in intersections:
                 doc.draw_line(line_style, current_x, y_pos, Tx - hw, y_pos)
-                # bridge
                 doc.draw_line(line_style, Tx - hw, y_pos, Tx - hw/2, y_pos - h)
                 doc.draw_line(line_style, Tx - hw/2, y_pos - h, Tx + hw/2, y_pos - h)
                 doc.draw_line(line_style, Tx + hw/2, y_pos - h, Tx + hw, y_pos)
@@ -284,19 +380,23 @@ class TreeConnectionLine(LineBase):
 
             doc.draw_line(line_style, current_x, y_pos, x_end, y_pos)
 
-
-        for b in self.start:
+        for b in self.start_boxes:
+            if getattr(b, 'page', None) and b.page.page_y_offset != page.page_y_offset:
+                continue
             y = b.y_cm + b.height / 2.0 - page.page_y_offset
             x1 = b.x_cm + b.width - page.page_x_offset
             draw_horizontal_with_bridges(x1, my_x, y)
 
-        for b in self.end:
+        for b in self.end_boxes:
+            if getattr(b, 'page', None) and b.page.page_y_offset != page.page_y_offset:
+                continue
             y = b.y_cm + b.height / 2.0 - page.page_y_offset
             x2 = b.x_cm - page.page_x_offset
             draw_horizontal_with_bridges(my_x, x2, y)
 
-        if min_y < max_y:
-            doc.draw_line(line_style, my_x, min_y, my_x, max_y)
+        if 0 <= my_x < usable_width:
+            if min_y < max_y:
+                doc.draw_line(line_style, my_x, min_y, my_x, max_y)
 
 
 class CalcItems:
@@ -437,12 +537,12 @@ class MakeExpandedTree:
         if current_gen < (1 - self.desc_gen):
             return
 
-        if len(self.visited) > 250:
+        if len(self.visited) > 400:
             if not self.limit_warned and self.user:
                 self.limit_warned = True
                 self.user.warn(
                     _("Tree Truncated"),
-                    _("The generated tree reached the 250 people safety limit and has been truncated.\n\nPlease reduce the number of generations or disable some options to see all branches.")
+                    _("The generated tree reached the 400 people safety limit and has been truncated.\n\nPlease reduce the number of generations or disable some options to see all branches.")
                 )
             return
 
@@ -499,12 +599,12 @@ class MakeExpandedTree:
         is exhausted or the handle was already visited elsewhere.
         """
 
-        if len(self.visited) > 250:
+        if len(self.visited) > 400:
             if not self.limit_warned and self.user:
                 self.limit_warned = True
                 self.user.warn(
                     _("Tree Truncated"),
-                    _("The generated tree reached the 250 people safety limit and has been truncated.\n\nPlease reduce the number of generations or disable some options to see all branches.")
+                    _("The generated tree reached the 400 people safety limit and has been truncated.\n\nPlease reduce the number of generations or disable some options to see all branches.")
                 )
             return None
 
@@ -649,7 +749,8 @@ class MakeExpandedTree:
                     for fg in n.family_groups:
                         children = fg['children']
                         spouse = fg['spouse']
-                        if not children:
+
+                        if not children and not spouse:
                             continue
 
                         start_boxes = [c.box for c in children]
@@ -662,7 +763,7 @@ class MakeExpandedTree:
                         family_index += 1
 
                 if not (n.is_sibling or n.is_cousin):
-                    if n.father or n.mother:
+                    if n.father or n.mother or n.siblings:
                         start_boxes = [n.box]
                         for sib in n.siblings:
                             start_boxes.append(sib.box)
@@ -684,25 +785,24 @@ class LRTransform:
     def __init__(self, canvas, max_generations, gen_shift=0):
         self.canvas = canvas
         self.rept_opts = canvas.report_opts
-        self.y_offset = self.rept_opts.littleoffset * 2 + self.canvas.title.height
+
+        top_margin = 0.8 if GUIConnect().get_val("show_idx") else 0.0
+        self.y_offset = self.rept_opts.littleoffset * 2 + self.canvas.title.height + top_margin
+
         self.gen_shift = gen_shift
 
-        max_offset = max([getattr(b, 'collateral_offset', 0) for b in self.canvas.boxes if b.level[LVL_GEN] <= 1] + [0])
-
+        max_offset = max([getattr(b, 'collateral_offset', 0) for b in self.canvas.boxes] + [0])
         self.cascade_pad = max_offset * 0.6
 
     def _place(self, box):
         box.x_cm = self.rept_opts.littleoffset
-
         display_gen = box.level[LVL_GEN] + self.gen_shift
-
         box.x_cm += display_gen * (self.rept_opts.col_width + self.rept_opts.max_box_width + self.cascade_pad)
 
         # cascade
-        if box.level[LVL_GEN] <= 1:
-            c_offset = getattr(box, 'collateral_offset', 0)
-            if c_offset > 0:
-                box.x_cm += c_offset * 0.6
+        c_offset = getattr(box, 'collateral_offset', 0)
+        if c_offset > 0:
+            box.x_cm += c_offset * 0.6
 
         box.y_cm = self.rept_opts.max_box_height + self.rept_opts.box_pgap
         box.y_cm *= box.level[LVL_Y]
@@ -716,8 +816,7 @@ class LRTransform:
 
 
 class MakeReport:
-    """Second layout stage: measures real box sizes and finalises geometry.
-    """
+    """Second layout stage: measures real box sizes and finalises geometry."""
 
     def __init__(self, dbase, doc, canvas, font_normal):
         self.database = dbase
@@ -727,15 +826,11 @@ class MakeReport:
 
         _gui = GUIConnect()
         self.compress_tree = _gui.compress_tree()
-
         self.mother_ht = self.father_ht = 0
         self.max_generations = 0
 
     def get_height_width(self, box):
-        """Measure one box and update the running layout statistics."""
-        # Ask the canvas for the natural size, then add breathing room.
         self.canvas.set_box_height_width(box)
-
         box.width += 0.6
         box.height += 0.6
 
@@ -757,20 +852,29 @@ class MakeReport:
     def start(self):
         self.father_ht = 0.0
         self.mother_ht = 0.0
+
+        self.canvas.report_opts.col_width += 1.0
+
         for box in self.canvas.boxes:
             self.get_height_width(box)
 
         self.canvas.report_opts.max_box_height = max(self.father_ht, self.mother_ht)
 
+        if GUIConnect().get_val("show_idx"):
+            self.canvas.report_opts.box_pgap += 1.0
+
         for box in self.canvas.boxes:
             box.width = self.canvas.report_opts.max_box_width
 
-        #shift the whole tree
-        min_gen = min([b.level[LVL_GEN] for b in self.canvas.boxes] + [1])
-        gen_shift = 1 - min_gen if min_gen < 1 else 0
+        min_gen = min([b.level[LVL_GEN] for b in self.canvas.boxes] + [0])
+        gen_shift = abs(min_gen) if min_gen < 0 else 0
         self.max_generations += gen_shift
 
-        transform = LRTransform(self.canvas, self.max_generations, gen_shift)
+        if gen_shift > 0:
+            for box in self.canvas.boxes:
+                box.level = (box.level[LVL_GEN] + gen_shift, box.level[1], box.level[2])
+
+        transform = LRTransform(self.canvas, self.max_generations, 0)
         transform.place()
 
 
@@ -859,6 +963,9 @@ class ExpandedAncestorTree(Report):
         font_normal = style_sheet.get_paragraph_style("AC2-Normal").get_font()
         self.canvas = Canvas(self.doc, ReportOptions(self.doc, font_normal, "AC2-line"))
 
+        if self.connect.get_val("show_idx"):
+            self.canvas.report_opts.littleoffset += 1.0
+
         self.canvas.report_opts.box_shadow *= self.connect.get_val("shadowscale")
         self.canvas.report_opts.box_pgap *= self.connect.get_val("box_Yscale")
         self.canvas.report_opts.box_mgap *= self.connect.get_val("box_Yscale")
@@ -894,6 +1001,14 @@ class ExpandedAncestorTree(Report):
             #  fit the chart to the requested page strategy.
             one_page = self.connect.get_val("resize_page")
             scale_report = self.connect.get_val("scale_tree")
+
+            if "Svg" in self.doc.__class__.__name__ or "svg" in str(type(self.doc)).lower():
+                one_page = True
+                scale_report = 0
+
+            if scale_report == 2 and not ("Svg" in self.doc.__class__.__name__ or "svg" in str(type(self.doc)).lower()):
+                scale_report = 1
+
             scale = self.canvas.scale_report(one_page, scale_report != 0, scale_report == 2)
             step()
 
@@ -907,7 +1022,13 @@ class ExpandedAncestorTree(Report):
         incblank = self.connect.get_val("inc_blank")
         prnnum = self.connect.get_val("inc_pagenum")
 
-        # How many generation-columns fit into one usable page width?
+        doc_type_str = str(type(self.doc)).lower()
+        is_vector = any(v in doc_type_str for v in ['pdf', 'svg', 'cairo', 'psdoc', 'image'])
+
+        if "svg" in doc_type_str:
+            one_page = True
+            incblank = True
+
         colsperpage = self.doc.get_usable_width()
         colsperpage += self.canvas.report_opts.col_width
         colsperpage = int(
@@ -920,6 +1041,13 @@ class ExpandedAncestorTree(Report):
             page_num_box = PageNumberBox(self.doc, "AC2-box", self._locale)
 
         self.canvas.paginate(colsperpage, one_page)
+
+        if is_vector:
+            try:
+                for page in self.canvas.page_iter_gen(True):
+                    page.lines = self.canvas.lines
+            except Exception:
+                pass
 
         pages = self.canvas.page_count(incblank)
         with self._user.progress(_("Ancestor Tree Expanded"), _("Printing the Tree..."), pages) as step:
@@ -944,11 +1072,14 @@ class ExpandedAncestorTree(Report):
         graph_style.set_line_width(graph_style.get_line_width() * scale)
         style_sheet.add_draw_style("AC2-box", graph_style)
 
-        if style_sheet.has_style("AC2-center-box"):
+        try:
             graph_style_center = style_sheet.get_draw_style("AC2-center-box")
-            graph_style_center.set_shadow(graph_style_center.get_shadow(), self.canvas.report_opts.box_shadow * scale)
-            graph_style_center.set_line_width(graph_style_center.get_line_width() * scale)
-            style_sheet.add_draw_style("AC2-center-box", graph_style_center)
+            if graph_style_center:
+                graph_style_center.set_shadow(graph_style_center.get_shadow(), self.canvas.report_opts.box_shadow * scale)
+                graph_style_center.set_line_width(graph_style_center.get_line_width() * scale)
+                style_sheet.add_draw_style("AC2-center-box", graph_style_center)
+        except (AttributeError, KeyError):
+            pass
 
         graph_style = style_sheet.get_draw_style("AC2-sibling-box")
         graph_style.set_shadow(graph_style.get_shadow(), self.canvas.report_opts.box_shadow * scale)
@@ -999,17 +1130,21 @@ class ExpandedAncestorTree(Report):
             style_sheet.add_paragraph_style("AC2-Title", para_style)
 
         graph_style = GraphicsStyle()
-        width = graph_style.get_line_width()
-        width = width * scale
-        graph_style.set_line_width(width)
+        graph_style.set_line_width(1.0 * scale)
+        graph_style.set_color((0, 0, 0))
         style_sheet.add_draw_style("AC2-line", graph_style)
 
-        for i in range(15):
+        for i in range(30):
             style_name = f"AC2-line-color-{i}"
-            if style_sheet.has_style(style_name):
+            try:
                 gs = style_sheet.get_draw_style(style_name)
-                gs.set_line_width(gs.get_line_width() * scale)
-                style_sheet.add_draw_style(style_name, gs)
+                if gs:
+                    current_width = gs.get_line_width()
+                    base_w = current_width if current_width > 0 else 1.0
+                    gs.set_line_width(base_w * scale)
+                    style_sheet.add_draw_style(style_name, gs)
+            except (AttributeError, KeyError):
+                pass
 
         self.doc.set_style_sheet(style_sheet)
 
@@ -1309,30 +1444,47 @@ class ExpandedAncestorTreeOptions(MenuReportOptions):
         default_style.add_draw_style("AC2-Title-box", graph_style)
 
         graph_style = GraphicsStyle()
-        # Plain black connector line (used when colours are disabled).
+        graph_style.set_line_width(1.0)
+        graph_style.set_color((0, 0, 0))
         default_style.add_draw_style("AC2-line", graph_style)
 
         # Palette behind the "Use random colors for family lines" option:
         # family connection N picks AC2-line-color-{N % 15}.
         colors = [
-            (220, 20, 60),   # Crimson
-            (0, 100, 0),     # DarkGreen
-            (0, 0, 205),     # MediumBlue
-            (255, 140, 0),   # DarkOrange
-            (139, 0, 139),   # DarkMagenta
-            (0, 139, 139),   # DarkCyan
-            (178, 34, 34),   # FireBrick
-            (75, 0, 130),    # Indigo
-            (34, 139, 34),   # ForestGreen
-            (205, 92, 92),   # IndianRed
-            (0, 0, 128),     # Navy
-            (218, 165, 32),  # GoldenRod
-            (46, 139, 87),   # SeaGreen
-            (139, 69, 19),   # SaddleBrown
-            (199, 21, 133),  # MediumVioletRed
+            (220, 20, 60),   # 0: Crimson
+            (0, 100, 0),     # 1: DarkGreen
+            (0, 0, 205),     # 2: MediumBlue
+            (255, 140, 0),   # 3: DarkOrange
+            (139, 0, 139),   # 4: DarkMagenta
+            (0, 139, 139),   # 5: DarkCyan
+            (178, 34, 34),   # 6: FireBrick
+            (75, 0, 130),    # 7: Indigo
+            (34, 139, 34),   # 8: ForestGreen
+            (205, 92, 92),   # 9: IndianRed
+            (0, 0, 128),     # 10: Navy
+            (218, 165, 32),  # 11: GoldenRod
+            (46, 139, 87),   # 12: SeaGreen
+            (139, 69, 19),   # 13: SaddleBrown
+            (199, 21, 133),  # 14: MediumVioletRed
+            (0, 128, 128),   # 15: Teal
+            (70, 130, 180),  # 16: SteelBlue
+            (128, 128, 0),   # 17: Olive
+            (128, 0, 0),     # 18: Maroon
+            (106, 90, 205),  # 19: SlateBlue
+            (210, 105, 30),  # 20: Chocolate
+            (85, 107, 47),   # 21: DarkOliveGreen
+            (65, 105, 225),  # 22: RoyalBlue
+            (255, 69, 0),    # 23: OrangeRed
+            (255, 20, 147),  # 24: DeepPink
+            (47, 79, 79),    # 25: DarkSlateGray
+            (205, 133, 63),  # 26: Peru
+            (30, 144, 255),  # 27: DodgerBlue
+            (184, 134, 11),  # 28: DarkGoldenRod
+            (255, 99, 71),   # 29: Tomato
         ]
         for i, col in enumerate(colors):
             line_style = GraphicsStyle()
             line_style.set_line_width(1)
             line_style.set_color(col)
             default_style.add_draw_style(f"AC2-line-color-{i}", line_style)
+
